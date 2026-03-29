@@ -5,7 +5,7 @@ import pandas as pd
 from io import BytesIO
 
 # Page Setup
-st.set_page_config(page_title="ATS Alike| ATS Pro", layout="wide")
+st.set_page_config(page_title="ATS alike | ATS Pro + Analytics", layout="wide")
 
 def extract_text_from_pdf(file):
     try:
@@ -25,7 +25,6 @@ def screen_resume(text, keywords):
     return status, found, score
 
 # --- Sidebar UI ---
-st.sidebar.image("https://www.gstatic.com/lamda/images/gemini_sparkle_v002.svg", width=50)
 st.sidebar.header("ATS Settings")
 keywords_input = st.sidebar.text_area("Target Keywords (comma separated)", 
                                      "Excel, Economics, Research, Data Analysis, Python, HR")
@@ -57,11 +56,28 @@ if uploaded_files:
         # Convert to DataFrame
         df = pd.DataFrame(results_list)
 
-        # --- Display Results ---
-        st.subheader("Screening Results")
+        # --- NEW: Analytics Section ---
+        st.divider()
+        st.subheader("📊 Screening Analytics")
+        col1, col2, col3 = st.columns(3)
+        
+        total = len(df)
+        shortlisted = len(df[df['Decision'] == 'SHORTLIST'])
+        rejected = len(df[df['Decision'] == 'REJECT'])
+        
+        col1.metric("Total Resumes", total)
+        col2.metric("Shortlisted ✅", shortlisted, delta=f"{(shortlisted/total)*100:.1f}%" if total > 0 else 0)
+        col3.metric("Rejected ❌", rejected, delta=f"-{(rejected/total)*100:.1f}%" if total > 0 else 0, delta_color="inverse")
+
+        # Simple Bar Chart for Decision Distribution
+        chart_data = df['Decision'].value_counts()
+        st.bar_chart(chart_data)
+
+        # --- Display Table ---
+        st.subheader("Detailed Results")
         st.dataframe(df, use_container_width=True)
 
-        # --- Excel Export Logic ---
+        # --- Excel Export ---
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df.to_excel(writer, index=False, sheet_name='Screening_Report')
